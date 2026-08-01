@@ -4,6 +4,12 @@ A real-time black hole visualizer that ray-traces light bent by gravity (gravita
 
 This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_hole), with a couple of fixes on top (see [Changes I made or fixed](#changes-i-made-or-fixed)). All credit for the original design and implementation goes to the original author.
 
+## Screenshots
+
+| BlackHole2D | BlackHole3D |
+|---|---|
+| ![2D lensing demo](screenshots/2d.png) | ![3D real-time black hole](screenshots/3d.png) |
+
 ## Features
 
 - **Gravitational lensing** — light rays are integrated along Schwarzschild geodesics, both on the CPU (2D demo) and on the GPU via a compute shader (3D demo)
@@ -31,6 +37,7 @@ This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_
 
 ## Known limitations
 
+- **The default 3D camera angle triggers a rendering bug.** The camera starts at `elevation = 90°`, sitting exactly in the accretion disk's plane. At that exact degenerate angle, a large region that should be empty black space instead renders as a flat yellow/orange fill (likely the disk-crossing test misfiring for rays that start already on `y = 0`). Simply left-click-dragging to rotate the camera even slightly fixes it — the screenshot above was taken after a small rotation for this reason.
 - The GPU integrator in `geodesic.comp` (`rk4Step`) is actually a single Euler step, not true RK4 — the CPU versions use real 4-stage RK4 and are more accurate.
 - The integration step size is fixed rather than adaptive, so it's simultaneously coarse near the black hole and wastefully fine far away.
 - The accretion disk is a flat radius-based color gradient — no Doppler beaming or temperature falloff.
