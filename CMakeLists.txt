@@ -13,6 +13,10 @@ find_package(OpenGL REQUIRED)
 # Common dependencies
 set(DEPS glfw GLEW::GLEW glm::glm OpenGL::GL)
 
+if (MSVC)
+    add_compile_options(/utf-8)
+endif()
+
 # 2D Lensing executable
 add_executable(BlackHole2D 2D_lensing.cpp)
 target_link_libraries(BlackHole2D PRIVATE ${DEPS})

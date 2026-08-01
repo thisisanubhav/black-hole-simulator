@@ -213,7 +213,11 @@ void rk4Step(Ray& ray, double dλ, double rs) {
 
 
 int main () {
-    //rays.push_back(Ray(vec2(-1e11, 3.27606302719999999e10), vec2(c, 0.0f)));
+    // Fire a fan of parallel light rays from the left, at various heights,
+    // so gravitational lensing near the black hole is visible.
+    for (double y = -6e10; y <= 6e10; y += 1e10) {
+        rays.push_back(Ray(vec2(-1e11, y), vec2(c, 0.0f)));
+    }
     while(!glfwWindowShouldClose(engine.window)) {
         engine.run();
         SagA.draw();
