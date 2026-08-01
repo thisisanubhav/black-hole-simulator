@@ -188,6 +188,7 @@ struct Engine {
             exit(EXIT_FAILURE);
         }
         glfwMakeContextCurrent(window);
+        glfwSwapInterval(1); // vsync: cap frame rate so dt-scaled physics stays stable
         glewExperimental = GL_TRUE;
         GLenum glewErr = glewInit();
         if (glewErr != GLEW_OK) {
@@ -672,21 +673,17 @@ int main() {
                  float dz = obj2.posRadius.z - obj.posRadius.z;
                  float distance = sqrt(dx * dx + dy * dy + dz * dz);
                  if (distance > 0) {
-                        vector<double> direction = {dx / distance, dy / distance, dz / distance};
-                        //distance *= 1000;
+                        double dirX = dx / distance, dirY = dy / distance, dirZ = dz / distance;
                         double Gforce = (G * obj.mass * obj2.mass) / (distance * distance);
-
                         double acc1 = Gforce / obj.mass;
-                        std::vector<double> acc = {direction[0] * acc1, direction[1] * acc1, direction[2] * acc1};
                         if (Gravity) {
-                            obj.velocity.x += acc[0];
-                            obj.velocity.y += acc[1];
-                            obj.velocity.z += acc[2];
+                            obj.velocity.x += dirX * acc1 * dt;
+                            obj.velocity.y += dirY * acc1 * dt;
+                            obj.velocity.z += dirZ * acc1 * dt;
 
-                            obj.posRadius.x += obj.velocity.x;
-                            obj.posRadius.y += obj.velocity.y;
-                            obj.posRadius.z += obj.velocity.z;
-                            cout << "velocity: " <<obj.velocity.x<<", " <<obj.velocity.y<<", " <<obj.velocity.z<<endl;
+                            obj.posRadius.x += obj.velocity.x * dt;
+                            obj.posRadius.y += obj.velocity.y * dt;
+                            obj.posRadius.z += obj.velocity.z * dt;
                         }
                     }
             }
