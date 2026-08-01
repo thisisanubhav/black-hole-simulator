@@ -144,7 +144,12 @@ void main() {
         lambda += D_LAMBDA;
 
         vec3 newPos = vec3(ray.x, ray.y, ray.z);
-        if (crossesEquatorialPlane(prevPos, newPos)) { hitDisk = true; break; }
+        // Skip the crossing test on the very first step: prevPos is still the camera's
+        // raw starting position there, not a real trajectory sample. If the camera itself
+        // sits near y=0 within the disk's radius (e.g. elevation near 90 degrees), the sign
+        // comparison is just floating-point noise and falsely registers as a crossing for
+        // almost every ray, painting the whole background with disk color.
+        if (i > 0 && crossesEquatorialPlane(prevPos, newPos)) { hitDisk = true; break; }
         if (interceptObject(ray)) { hitObject = true; break; }
         prevPos = newPos;
         if (ray.r > ESCAPE_R) break;

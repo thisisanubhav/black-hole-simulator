@@ -37,7 +37,6 @@ This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_
 
 ## Known limitations
 
-- **The default 3D camera angle triggers a rendering bug.** The camera starts at `elevation = 90°`, sitting exactly in the accretion disk's plane. At that exact degenerate angle, a large region that should be empty black space instead renders as a flat yellow/orange fill (likely the disk-crossing test misfiring for rays that start already on `y = 0`). Simply left-click-dragging to rotate the camera even slightly fixes it — the screenshot above was taken after a small rotation for this reason.
 - The GPU integrator in `geodesic.comp` (`rk4Step`) is actually a single Euler step, not true RK4 — the CPU versions use real 4-stage RK4 and are more accurate.
 - The integration step size is fixed rather than adaptive, so it's simultaneously coarse near the black hole and wastefully fine far away.
 - The accretion disk is a flat radius-based color gradient — no Doppler beaming or temperature falloff.
@@ -97,5 +96,7 @@ sudo apt install build-essential cmake \
 - Fixed the N-body gravity simulation being frame-rate dependent: `dt` was computed every frame but never actually used in the velocity/position integration. Also enabled vsync so frame timing stays sane.
 - Fixed unbounded memory growth in the 2D demo: rays that escape to infinity or fall into the event horizon now stop integrating instead of growing their trail forever.
 - Fixed the Schwarzschild radius (`SagA_rs`) being hardcoded separately in `geodesic.comp` from `SagA.r_s` on the CPU — it's now sent through the Camera UBO each frame from a single source of truth, so changing the black hole's mass can no longer silently desync the two.
+- Enabled vsync in the 2D demo too — its render loop had no frame cap, so at uncapped FPS the light rays (each step advancing ~c meters) crossed the whole screen in a fraction of a second instead of a watchable animation.
+- Fixed a rendering bug where the accretion-disk crossing test could false-positive on the very first ray step, because it compared the camera's raw starting position (not a real trajectory sample) against the position after one step. This showed up as a large, wrong yellow/orange fill covering the background whenever the camera was near `elevation = 90°` (its default startup angle) — including on first launch, before you ever move the camera.
 
 Upstream PR: [kavan010/black_hole#49](https://github.com/kavan010/black_hole/pull/49)
