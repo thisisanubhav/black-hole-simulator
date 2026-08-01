@@ -45,6 +45,8 @@ struct Engine {
             exit(EXIT_FAILURE);
         }
         glfwMakeContextCurrent(window);
+        glfwSwapInterval(1); // vsync: without this the loop runs uncapped, so a ray
+                              // step per frame flashes across the screen almost instantly
         glewExperimental = GL_TRUE;
         if (glewInit() != GLEW_OK) {
             cerr << "Failed to initialize GLEW" << endl;
