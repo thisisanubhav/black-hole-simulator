@@ -1,57 +1,63 @@
-# **black**_**hole**
+# Black Hole Simulator
 
-Black hole simulation project
+A real-time black hole visualizer that ray-traces light bent by gravity (gravitational lensing) by numerically integrating the Schwarzschild null-geodesic equations — not a shader approximation, the actual general-relativity math, per pixel.
 
-Here is the black hole raw code, everything will be inside a src bin incase you want to copy the files
+This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_hole), with a couple of fixes on top (see [Changes in this fork](#changes-in-this-fork)). All credit for the original design and implementation goes to the original author.
 
-I'm writing this as I'm beginning this project (hopefully I complete it ;D) here is what I plan to do:
+## Features
 
-1. Ray-tracing : add ray tracing to the gravity simulation to simulate gravitational lensing
+- **Gravitational lensing** — light rays are integrated along Schwarzschild geodesics, both on the CPU (2D demo) and on the GPU via a compute shader (3D demo)
+- **Accretion disk** — rendered where rays cross the equatorial plane within the disk's inner/outer radius
+- **Spacetime curvature grid** — a warped grid overlay visualizing the "dip" in spacetime around the black hole (Flamm's paraboloid)
+- **Real-time 3D rendering** — the 3D version dispatches ray tracing on the GPU every frame
 
-2. Accretion disk : simulate accreciate disk using the ray tracing + the halos
+## Two versions
 
-3. Spacetime curvature : demonstrate visually the "trapdoor in spacetime" that is black holes using spacetime grid
+| | Description |
+|---|---|
+| **BlackHole2D** (`2D_lensing.cpp`) | CPU-only, top-down 2D lensing demo. Fires a fan of light rays past the black hole and draws their curved paths. No camera controls. |
+| **BlackHole3D** (`black_hole.cpp` + `geodesic.comp`) | Full 3D scene rendered via an OpenGL compute shader, with an orbiting camera, accretion disk, spacetime grid, and simple Newtonian gravity between orbiting objects. |
 
-4. [optional] try to make it run realtime ;D
+### Controls (BlackHole3D)
 
-I hope it works :/
+- **Left-click + drag** — orbit the camera around the black hole
+- **Scroll wheel** — zoom in/out
+- **Right-click (hold)** or **G** — toggle simple gravity simulation between the orbiting objects
 
-Edit: After completion of project -
+## Known limitations
 
-## **Building Requirements:**
+- The GPU integrator in `geodesic.comp` (`rk4Step`) is actually a single Euler step, not true RK4 — the CPU versions use real 4-stage RK4 and are more accurate.
+- The accretion disk is a flat radius-based color gradient — no Doppler beaming or temperature falloff.
+- The orbiting objects move under plain Newtonian gravity; only the black hole itself bends light.
+- `CPU-geodesic.cpp` and `ray_tracing.cpp` are earlier prototypes kept for reference; they aren't wired into the CMake build.
 
-1. C++ Compiler supporting C++ 17 or newer
+## Building Requirements
 
-2. [Cmake](https://cmake.org/)
-
-3. [Vcpkg](https://vcpkg.io/en/)
-
+1. C++ compiler supporting C++17 or newer (MSVC, GCC, or Clang)
+2. [CMake](https://cmake.org/)
+3. [vcpkg](https://vcpkg.io/en/)
 4. [Git](https://git-scm.com/)
 
-## **Build Instructions:**
+## Build Instructions
 
-1. Clone the repository:
-	-  `git clone https://github.com/kavan010/black_hole.git`
-2. CD into the newly cloned directory
-	- `cd ./black_hole` 
-3. Install dependencies with Vcpkg
-	- `vcpkg install`
-4. Get the vcpkg cmake toolchain file path
-	- `vcpkg integrate install`
-	- This will output something like : `CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake"`
-5. Create a build directory
-	- `mkdir build`
-6. Configure project with CMake
-	-  `cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake`
-	- Use the vcpkg cmake toolchain path from above
-7. Build the project
-	- `cmake --build build`
-8. Run the program
-	- The executables will be located in the build folder
+1. Clone the repository and its submodule-free dependency manager:
+	- `git clone https://github.com/thisisanubhav/black-hole-simulator.git`
+	- `cd black-hole-simulator`
+2. Get [vcpkg](https://github.com/microsoft/vcpkg) if you don't already have it, and note its path:
+	- `git clone https://github.com/microsoft/vcpkg.git`
+	- `./vcpkg/bootstrap-vcpkg.bat` (Windows) or `./vcpkg/bootstrap-vcpkg.sh` (Linux/macOS)
+3. Configure the project with CMake, pointing at the vcpkg toolchain file (this will also install glfw3, glm, and glew automatically via manifest mode):
+	- `cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=/path/to/vcpkg/scripts/buildsystems/vcpkg.cmake`
+4. Build:
+	- `cmake --build build --config Release`
+5. Run:
+	- Executables (`BlackHole2D`, `BlackHole3D`) land in `build/Release` (MSVC) or `build/` (single-config generators)
+
+On **Windows with MSVC**, make sure you have the "Desktop development with C++" workload (Visual Studio Build Tools or full Visual Studio) installed.
 
 ### Alternative: Debian/Ubuntu apt workaround
 
-If you don't want to use vcpkg, or you just need a quick way to install the native development packages on Debian/Ubuntu, install these packages and then run the normal CMake steps above:
+If you don't want to use vcpkg, install the native dev packages directly and skip straight to the `cmake -B build -S .` step (no toolchain file needed):
 
 ```bash
 sudo apt update
@@ -59,13 +65,15 @@ sudo apt install build-essential cmake \
 	libglew-dev libglfw3-dev libglm-dev libgl1-mesa-dev
 ```
 
-This provides the GLEW, GLFW, GLM and OpenGL development files so `find_package(...)` calls in `CMakeLists.txt` can locate the libraries. After installing, run the `cmake -B build -S .` and `cmake --build build` commands as shown in the Build Instructions.
+## How the code works
 
-## **How the code works:**
-for 2D: simple, just run 2D_lensing.cpp with the nessesary dependencies installed.
+**2D**: `2D_lensing.cpp` seeds a set of light rays at different heights, integrates each one along a Schwarzschild geodesic using RK4, and draws the resulting curved path — showing lensing directly.
 
-for 3D: black_hole.cpp and geodesic.comp work together to run the simuation faster using GPU, essentially it sends over a UBO and geodesic.comp runs heavy calculations using that data.
+**3D**: `black_hole.cpp` (CPU) sets up the OpenGL context, camera, and scene data, then uploads it to `geodesic.comp` (GPU compute shader) each frame. The compute shader casts one ray per pixel, integrates it through curved spacetime, and writes the result (black hole shadow, lensed background, accretion disk, or object hit) into a texture that gets drawn to the screen.
 
-should work with nessesary dependencies installed, however I have only run it on windows with my GPU so am not sure!
+## Changes in this fork
 
-LMK if you would like an in-depth explanation of how the code works aswell :)
+- Fixed an MSVC build error (`error C3872`) caused by the non-ASCII `λ` identifier in the source by adding the `/utf-8` compile flag for MSVC in `CMakeLists.txt`.
+- Uncommented and expanded ray seeding in `2D_lensing.cpp` so the 2D demo actually shows light bending instead of a static black disc.
+
+Upstream PR: [kavan010/black_hole#49](https://github.com/kavan010/black_hole/pull/49)
