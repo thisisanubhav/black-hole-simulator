@@ -10,7 +10,7 @@ layout(std140, binding = 1) uniform Camera {
     float tanHalfFov;
     float aspect;
     bool moving;
-    int   _pad4;
+    float r_s; // Schwarzschild radius, synced from CPU (SagA.r_s) instead of duplicated as a constant below
 } cam;
 
 layout(std140, binding = 2) uniform Disk {
@@ -27,7 +27,7 @@ layout(std140, binding = 3) uniform Objects {
     float  mass[16]; 
 };
 
-const float SagA_rs = 1.269e10;
+float SagA_rs; // set from cam.r_s at the top of main() each invocation, not a hardcoded literal
 const float D_LAMBDA = 1e7;
 const double ESCAPE_R = 1e30;
 
@@ -115,6 +115,7 @@ bool crossesEquatorialPlane(vec3 oldPos, vec3 newPos) {
 }
 
 void main() {
+    SagA_rs = cam.r_s;
     int WIDTH  = cam.moving ? 200 : 200;
     int HEIGHT = cam.moving ? 150 : 150;
 

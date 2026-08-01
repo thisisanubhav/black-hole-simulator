@@ -513,7 +513,7 @@ struct Engine {
             float tanHalfFov;
             float aspect;
             bool moving;
-            int _pad4;
+            float r_s; // Schwarzschild radius, sent to the compute shader instead of being a duplicated literal there
         } data;
         vec3 fwd = normalize(cam.target - cam.position());
         vec3 up = vec3(0, 1, 0); // y axis is up, so disk is in x-z plane
@@ -527,6 +527,7 @@ struct Engine {
         data.tanHalfFov = tan(radians(60.0f * 0.5f));
         data.aspect = float(WIDTH) / float(HEIGHT);
         data.moving = cam.dragging || cam.panning;
+        data.r_s = static_cast<float>(SagA.r_s);
 
         glBindBuffer(GL_UNIFORM_BUFFER, cameraUBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(UBOData), &data);

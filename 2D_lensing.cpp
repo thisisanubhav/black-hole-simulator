@@ -193,9 +193,11 @@ struct Ray{
     
         glDisable(GL_BLEND);
     }
-    void step(double dλ, double rs) {
+    bool active = true; // false once the ray has fallen in or escaped, so it stops growing its trail forever
+    void step(double dλ, double rs, double escapeR) {
+        if (!active) return;
         // 1) integrate (r,φ,dr,dφ)
-        if(r <= rs) return; // stop if inside the event horizon
+        if (r <= rs) { active = false; return; } // stop if inside the event horizon
         rk4Step(*this, dλ, rs);
 
         // 2) convert back to cartesian x,y
@@ -204,6 +206,8 @@ struct Ray{
 
         // 3) record the trail
         trail.push_back({ float(x), float(y) });
+
+        if (r > escapeR) active = false; // escaped to infinity, no point integrating further
     }
 };
 vector<Ray> rays;
@@ -266,12 +270,13 @@ int main () {
     for (double y = -6e10; y <= 6e10; y += 1e10) {
         rays.push_back(Ray(vec2(-1e11, y), vec2(c, 0.0f)));
     }
+    const double ESCAPE_R = 5e12; // well beyond the initial viewport; rays past this stop integrating
     while(!glfwWindowShouldClose(engine.window)) {
         engine.run();
         SagA.draw();
 
         for (auto& ray : rays) {
-            ray.step(1.0f, SagA.r_s);
+            ray.step(1.0f, SagA.r_s, ESCAPE_R);
             ray.draw(rays);
         }
 
