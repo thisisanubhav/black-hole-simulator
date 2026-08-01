@@ -2,7 +2,7 @@
 
 A real-time black hole visualizer that ray-traces light bent by gravity (gravitational lensing) by numerically integrating the Schwarzschild null-geodesic equations — not a shader approximation, the actual general-relativity math, per pixel.
 
-This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_hole), with a couple of fixes on top (see [Changes in this fork](#changes-in-this-fork)). All credit for the original design and implementation goes to the original author.
+This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_hole), with a couple of fixes on top (see [Changes I made or fixed](#changes-i-made-or-fixed)). All credit for the original design and implementation goes to the original author.
 
 ## Features
 
@@ -15,7 +15,7 @@ This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_
 
 | | Description |
 |---|---|
-| **BlackHole2D** (`2D_lensing.cpp`) | CPU-only, top-down 2D lensing demo. Fires a fan of light rays past the black hole and draws their curved paths. No camera controls. |
+| **BlackHole2D** (`2D_lensing.cpp`) | CPU-only, top-down 2D lensing demo. Fires a fan of light rays past the black hole and draws their curved paths. Pan/zoom camera controls. |
 | **BlackHole3D** (`black_hole.cpp` + `geodesic.comp`) | Full 3D scene rendered via an OpenGL compute shader, with an orbiting camera, accretion disk, spacetime grid, and simple Newtonian gravity between orbiting objects. |
 
 ### Controls (BlackHole3D)
@@ -24,11 +24,21 @@ This is a derivative of [kavan010/black_hole](https://github.com/kavan010/black_
 - **Scroll wheel** — zoom in/out
 - **Right-click (hold)** or **G** — toggle simple gravity simulation between the orbiting objects
 
+### Controls (BlackHole2D)
+
+- **Left or middle-click + drag** — pan the view
+- **Scroll wheel** — zoom in/out
+
 ## Known limitations
 
 - The GPU integrator in `geodesic.comp` (`rk4Step`) is actually a single Euler step, not true RK4 — the CPU versions use real 4-stage RK4 and are more accurate.
+- The integration step size is fixed rather than adaptive, so it's simultaneously coarse near the black hole and wastefully fine far away.
 - The accretion disk is a flat radius-based color gradient — no Doppler beaming or temperature falloff.
-- The orbiting objects move under plain Newtonian gravity; only the black hole itself bends light.
+- The orbiting objects move under plain Newtonian gravity; only the black hole itself bends light (individual object mass has no effect on the ray tracer, only on the crude N-body pull between objects).
+- The `Objects` UBO's `mass[16]` array is packed on the CPU side without the padding GLSL's `std140` layout requires for arrays — currently harmless since the shader never reads that field, but it's a real layout mismatch.
+- No window-resize handling — the viewport, aspect ratio, and FOV stay fixed to the initial window size.
+- No GPU resource cleanup (`glDelete*`) on exit — relies on process exit to reclaim GPU resources.
+- No divide-by-zero guard at the poles (`theta ≈ 0` or `π`) in the geodesic setup.
 - `CPU-geodesic.cpp` and `ray_tracing.cpp` are earlier prototypes kept for reference; they aren't wired into the CMake build.
 
 ## Building Requirements
@@ -71,9 +81,14 @@ sudo apt install build-essential cmake \
 
 **3D**: `black_hole.cpp` (CPU) sets up the OpenGL context, camera, and scene data, then uploads it to `geodesic.comp` (GPU compute shader) each frame. The compute shader casts one ray per pixel, integrates it through curved spacetime, and writes the result (black hole shadow, lensed background, accretion disk, or object hit) into a texture that gets drawn to the screen.
 
-## Changes in this fork
+## Changes I made or fixed
 
 - Fixed an MSVC build error (`error C3872`) caused by the non-ASCII `λ` identifier in the source by adding the `/utf-8` compile flag for MSVC in `CMakeLists.txt`.
 - Uncommented and expanded ray seeding in `2D_lensing.cpp` so the 2D demo actually shows light bending instead of a static black disc.
+- Added pan (click-drag) and zoom (scroll wheel) controls to the 2D demo — the fields for this existed but were never wired up to any input.
+- Added a startup check for OpenGL 4.3 / `GL_ARB_compute_shader` support in `black_hole.cpp`, so the 3D version fails with a clear error message on unsupported GPUs instead of crashing later.
+- Fixed the N-body gravity simulation being frame-rate dependent: `dt` was computed every frame but never actually used in the velocity/position integration. Also enabled vsync so frame timing stays sane.
+- Fixed unbounded memory growth in the 2D demo: rays that escape to infinity or fall into the event horizon now stop integrating instead of growing their trail forever.
+- Fixed the Schwarzschild radius (`SagA_rs`) being hardcoded separately in `geodesic.comp` from `SagA.r_s` on the CPU — it's now sent through the Camera UBO each frame from a single source of truth, so changing the black hole's mass can no longer silently desync the two.
 
 Upstream PR: [kavan010/black_hole#49](https://github.com/kavan010/black_hole/pull/49)
