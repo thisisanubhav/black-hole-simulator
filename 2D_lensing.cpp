@@ -59,16 +59,63 @@ struct Engine {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        double left   = -width + offsetX;
-        double right  =  width + offsetX;
-        double bottom = -height + offsetY;
-        double top    =  height + offsetY;
+        double w = width / zoom;
+        double h = height / zoom;
+        double left   = -w + offsetX;
+        double right  =  w + offsetX;
+        double bottom = -h + offsetY;
+        double top    =  h + offsetY;
         glOrtho(left, right, bottom, top, -1.0, 1.0);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
     }
+
+    // Pan: click-drag with left or middle mouse button
+    void processMouseMove(double x, double y) {
+        if (middleMousePressed) {
+            double dx = x - lastMouseX;
+            double dy = y - lastMouseY;
+            double worldPerPixelX = (2.0 * width / zoom) / WIDTH;
+            double worldPerPixelY = (2.0 * height / zoom) / HEIGHT;
+            offsetX -= dx * worldPerPixelX;
+            offsetY += dy * worldPerPixelY; // screen y is flipped relative to GL y
+        }
+        lastMouseX = x;
+        lastMouseY = y;
+    }
+    void processMouseButton(int button, int action, GLFWwindow* win) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_MIDDLE) {
+            if (action == GLFW_PRESS) {
+                middleMousePressed = true;
+                glfwGetCursorPos(win, &lastMouseX, &lastMouseY);
+            } else if (action == GLFW_RELEASE) {
+                middleMousePressed = false;
+            }
+        }
+    }
+    // Zoom: scroll wheel
+    void processScroll(double yoffset) {
+        zoom *= std::pow(1.1, yoffset);
+        zoom = glm::clamp(zoom, 0.05f, 50.0f);
+    }
 };
 Engine engine;
+void setupEngineCallbacks(GLFWwindow* window) {
+    glfwSetWindowUserPointer(window, &engine);
+
+    glfwSetMouseButtonCallback(window, [](GLFWwindow* win, int button, int action, int mods) {
+        Engine* eng = (Engine*)glfwGetWindowUserPointer(win);
+        eng->processMouseButton(button, action, win);
+    });
+    glfwSetCursorPosCallback(window, [](GLFWwindow* win, double x, double y) {
+        Engine* eng = (Engine*)glfwGetWindowUserPointer(win);
+        eng->processMouseMove(x, y);
+    });
+    glfwSetScrollCallback(window, [](GLFWwindow* win, double xoffset, double yoffset) {
+        Engine* eng = (Engine*)glfwGetWindowUserPointer(win);
+        eng->processScroll(yoffset);
+    });
+}
 struct BlackHole {
     vec3 position;
     double mass;
@@ -213,6 +260,7 @@ void rk4Step(Ray& ray, double dλ, double rs) {
 
 
 int main () {
+    setupEngineCallbacks(engine.window);
     // Fire a fan of parallel light rays from the left, at various heights,
     // so gravitational lensing near the black hole is visible.
     for (double y = -6e10; y <= 6e10; y += 1e10) {

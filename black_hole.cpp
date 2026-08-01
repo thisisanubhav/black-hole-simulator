@@ -198,6 +198,15 @@ struct Engine {
             exit(EXIT_FAILURE);
         }
         cout << "OpenGL " << glGetString(GL_VERSION) << "\n";
+        if (!GLEW_VERSION_4_3 && !GLEW_ARB_compute_shader) {
+            cerr << "[ERROR] This GPU/driver does not support compute shaders "
+                 << "(requires OpenGL 4.3 or the GL_ARB_compute_shader extension).\n"
+                 << "The 3D black hole simulation cannot run on this hardware. "
+                 << "Try the 2D version (BlackHole2D) instead.\n";
+            glfwDestroyWindow(window);
+            glfwTerminate();
+            exit(EXIT_FAILURE);
+        }
         this->shaderProgram = CreateShaderProgram();
         gridShaderProgram = CreateShaderProgram("grid.vert", "grid.frag");
 
